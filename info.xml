@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<extension key="com.afx.ext" type="module">
+  <file>ext</file>
+  <name>afxSearch</name>
+  <description>AfxSearch</description>
+  <license>AGPL-3.0</license>
+  <maintainer>
+    <author>Kashif Malak</author>
+    <email>kashifmalak@yahoo.com</email>
+  </maintainer>
+  <urls>
+    <url desc="Main Extension Page">http://civicrm.dev/member/afxseach</url>
+    <url desc="Documentation">http://</url>
+    <url desc="Support">http://</url>
+    <url desc="Licensing">http://www.gnu.org/licenses/agpl-3.0.html</url>
+  </urls>
+  <releaseDate>2016-10-12</releaseDate>
+  <version>1.0</version>
+  <develStage>alpha</develStage>
+  <compatibility>
+    <ver>4.2</ver>
+  </compatibility>
+  <comments>This is a new, undeveloped module</comments>
+  <civix>
+    <namespace>CRM/Membership</namespace>
+  </civix>
+</extension>

@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<menu>
+  <item>
+    <path>civicrm/fakepakge</path>
+    <page_callback>CRM_Ext_Page_FakePage</page_callback>
+    <title>FakePage</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+</menu>
