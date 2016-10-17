@@ -129,7 +129,6 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
     }
     function relativeToAbs($relative) 
     {
-
         if ($relative) {
             $split = CRM_Utils_System::explode('.', $relative, 3);
             $dateRange = CRM_Utils_Date::relativeToAbsolute($split[0],  $split[1]);
@@ -169,21 +168,13 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
         if (!empty($selectedDateEnd)) {
              $fixedEndDate      =  $this->relativeToAbs($selectedDateEnd);
         };
-        //    echo "start date";
-        //    print_f($fixedStartDate) ;
-        //    echo "end date";
-        //    print_f($fixedEndDate );
-        //     //  exit;
-   
         if (!empty($selectedDateStart) &&  !empty($selectedDateEnd)) { // if user select both start and end dates
-            $where  .= " civicrm_membership.start_date    >= '" . $fixedStartDate[0] ."'";
-            $where  .= " AND civicrm_membership.end_date  <= '" . $fixedEndDate[1] ."'";
+            $where  .= " civicrm_membership.start_date    >= '{$fixedStartDate[0]}'";
+            $where  .= " AND civicrm_membership.end_date  <= '{$fixedEndDate[1]}'";
         }elseif (empty(!$selectedDateStart) &&  empty($selectedDateEnd)) { // if user does not select end date 
-            $where  .= " civicrm_membership.start_date  BETWEEN '" . $fixedStartDate[0] ."' AND '" . $fixedStartDate[1] ."'";
-            var_dump(" start date is NOT empty");
+            $where  .= " civicrm_membership.start_date  BETWEEN '{$fixedStartDate[0]}' AND '{$fixedStartDate[1]}'";
         }elseif (empty($selectedDateStart) &&  empty(!$selectedDateEnd)) { // if user does not select Start date 
-            $where  .= " civicrm_membership.end_date  BETWEEN '" . $fixedEndDate[0] ."' AND '" . $fixedEndDate[1] . "'";
-            var_dump(" start date is not empty");
+            $where  .= " civicrm_membership.end_date  BETWEEN '{$fixedEndDate[0]}' AND '{$fixedEndDate[1]}'";
         }
 
         return $where;
