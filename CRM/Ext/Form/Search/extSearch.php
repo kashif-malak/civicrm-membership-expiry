@@ -18,7 +18,7 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
    */
     function buildForm(&$form) 
     {    
-        CRM_Utils_System::setTitle(ts('Membership Expiry Search - php code'));
+        CRM_Utils_System::setTitle(ts('Membership Search - php code'));
      
         CRM_Core_Form_Date::buildDateRange($form, 'member_start_date', 1, '_low', '_high', ts('From'), false);
         $form->addElement('hidden', 'member_start_date_range_error');
@@ -26,7 +26,10 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
         CRM_Core_Form_Date::buildDateRange($form, 'member_end_date', 1, '_low', '_high', ts('From'), false);
         $form->addElement('hidden', 'member_end_date_range_error');
 
-        //  $form->addFormRule(array('CRM_Member_BAO_Query', 'formRule'), $form);
+        $form->addFormRule(array('CRM_Member_BAO_Query', 'formRule'), $form);
+       // $permission = CRM_Core_Permission::getPermission();
+
+    //  $this->addTaskMenu(CRM_Member_Task::permissionedTaskTitles($permission));
     }
 
     /**
@@ -157,7 +160,8 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
                 ts("You must select a date."),
                 CRM_Utils_System::url(
                     'civicrm/contact/search/custom',
-                    "reset=1&csid={$this->_formValues['customSearchID']}",
+                    "reset=1&csid="
+                        . "{$this->_formValues['customSearchID']}",
                     false, null, false, true
                 )
             );
@@ -169,8 +173,8 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
              $fixedEndDate      =  $this->relativeToAbs($selectedDateEnd);
         };
         if (!empty($selectedDateStart) &&  !empty($selectedDateEnd)) { // if user select both start and end dates
-            $where  .= " civicrm_membership.start_date    >= '{$fixedStartDate[0]}'";
-            $where  .= " AND civicrm_membership.end_date  <= '{$fixedEndDate[1]}'";
+            $where  .= " civicrm_membership.start_date  BETWEEN '{$fixedStartDate[0]}' AND '{$fixedStartDate[1]}'";
+            $where  .= " AND civicrm_membership.end_date BETWEEN '{$fixedEndDate[0]}' AND '{$fixedEndDate[1]}'";
         }elseif (empty(!$selectedDateStart) &&  empty($selectedDateEnd)) { // if user does not select end date 
             $where  .= " civicrm_membership.start_date  BETWEEN '{$fixedStartDate[0]}' AND '{$fixedStartDate[1]}'";
         }elseif (empty($selectedDateStart) &&  empty(!$selectedDateEnd)) { // if user does not select Start date 
