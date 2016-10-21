@@ -3,21 +3,30 @@
 /**
  * A custom Membership search
  */
-class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base implements CRM_Contact_Form_Search_Interface
-{
-    function __construct(&$formValues) 
-    {
-        parent::__construct($formValues);
-    }
+class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base implements CRM_Contact_Form_Search_Interface{
+   
+  protected $_query;
+  protected $_aclFrom = NULL;
+  protected $_aclWhere = NULL;
 
+  function __construct(&$formValues) {
+        parent::__construct($formValues);
+    
+        $this->_queryParams = CRM_Contact_BAO_Query::convertFormValues($this->_formValues);
+        $this->_query = new CRM_Contact_BAO_Query($this->_queryParams,
+        CRM_Member_BAO_Query::defaultReturnProperties(CRM_Contact_BAO_Query::MODE_MEMBER,
+        FALSE), NULL, FALSE, FALSE,CRM_Contact_BAO_Query::MODE_MEMBER
+        );
+    
+    }
+ 
     /**
    * Prepare a set of search fields
    *
    * @param  CRM_Core_Form $form modifiable
    * @return void
    */
-    function buildForm(&$form) 
-    {    
+    function buildForm(&$form){    
         CRM_Utils_System::setTitle(ts('Membership Search - php code'));
      
         CRM_Core_Form_Date::buildDateRange($form, 'member_start_date', 1, '_low', '_high', ts('From'), false);
@@ -25,12 +34,7 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
 
         CRM_Core_Form_Date::buildDateRange($form, 'member_end_date', 1, '_low', '_high', ts('From'), false);
         $form->addElement('hidden', 'member_end_date_range_error');
-
-        $form->addFormRule(array('CRM_Member_BAO_Query', 'formRule'), $form);
-       // $permission = CRM_Core_Permission::getPermission();
-
-    //  $this->addTaskMenu(CRM_Member_Task::permissionedTaskTitles($permission));
-    }
+     }
 
     /**
    * Get a list of summary data points
@@ -40,8 +44,7 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
    *  - total: numeric
    */
   
-    public function count() 
-    {
+    public function count(){
         $sql = $this->all();
 
         $dao = CRM_Core_DAO::executeQuery(
@@ -50,8 +53,7 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
         );
         return $dao->N;
     }
-    function summary() 
-    {
+    function summary(){
         return null;
         // return array(
         //   'summary' => 'This is a summary',
@@ -64,8 +66,7 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
    *
    * @return array, keys are printable column headers and values are SQL column names
    */
-    function &columns() 
-    {
+    function &columns(){
         // return by reference
         $columns = array(
         ts('Name') => 'display_name',
@@ -86,13 +87,8 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
    * @param  bool $justIDs
    * @return string, sql
    */
-    function all($offset = 0, $rowcount = 0, $sort = null, $includeContactIDs = false, $justIDs = false) 
-    {
-        // delegate to $this->sql(), $this->select(), $this->from(), $this->where(), etc.
-   
-     
-        return $this->sql($this->select(), $offset, $rowcount, $sort, $includeContactIDs, null);
-
+    function all($offset = 0, $rowcount = 0, $sort = null, $includeContactIDs = false, $justIDs = false){      
+         return $this->sql($this->select(), $offset, $rowcount, $sort, $includeContactIDs, null);  
     }
 
     /**
@@ -100,16 +96,15 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
    *
    * @return string, sql fragment with SELECT arguments
    */
-    function select() 
-    {
+    function select(){
         return "
-            civicrm_membership.membership_type_id,
+            membership_type_id,
             civicrm_membership.id as 'membership_id',
-            civicrm_membership.contact_id,
+            contact_a.id as contact_id,
             civicrm_membership.start_date,
             civicrm_membership.end_date,
             civicrm_membership_type.description,
-            civicrm_contact.display_name
+            contact_a.display_name
     ";
     }
 
@@ -118,70 +113,28 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
    *
    * @return string, sql fragment with FROM and JOIN clauses
    */
-    function from() 
-    {
-        return "
+    function from(){
+     $this->buildACLClause('contact_a');
+     $from = $this->_query->_fromClause;
+     $from .= "{$this->_aclFrom}";    
+     return $from;
+    }
 
-            FROM civicrm_membership
-            LEFT OUTER JOIN civicrm_membership_type
-            ON civicrm_membership.membership_type_id = civicrm_membership_type.id
-            LEFT OUTER JOIN civicrm_contact
-            ON civicrm_membership.contact_id = civicrm_contact.id
-           
-            ";
-    }
-    function relativeToAbs($relative) 
-    {
-        if ($relative) {
-            $split = CRM_Utils_System::explode('.', $relative, 3);
-            $dateRange = CRM_Utils_Date::relativeToAbsolute($split[0],  $split[1]);
-            $from = substr($dateRange['from'], 0, 8);
-            $to = substr($dateRange['to'], 0, 8);
-            return array($from, $to);
-        }
-        return null;
-    }
     /**
    * Construct a SQL WHERE clause
    *
    * @param  bool $includeContactIDs
    * @return string, sql fragment with conditional expressions
    */
-    function where($includeContactIDs = false) 
-    {
-    
-        $where = "";
-
-        $selectedDateStart = $this->_formValues['member_start_date_relative'];
-        $selectedDateEnd   = $this->_formValues['member_end_date_relative'];
-    
-        if (empty($selectedDateStart) &&  empty($selectedDateEnd)) {
-            CRM_Core_Error::statusBounce(
-                ts("You must select a date."),
-                CRM_Utils_System::url(
-                    'civicrm/contact/search/custom',
-                    "reset=1&csid="
-                        . "{$this->_formValues['customSearchID']}",
-                    false, null, false, true
-                )
-            );
-        }
-        if (!empty($selectedDateStart)) {
-            $fixedStartDate    =  $this->relativeToAbs($selectedDateStart);
-        };  
-        if (!empty($selectedDateEnd)) {
-             $fixedEndDate      =  $this->relativeToAbs($selectedDateEnd);
-        };
-        if (!empty($selectedDateStart) &&  !empty($selectedDateEnd)) { // if user select both start and end dates
-            $where  .= " civicrm_membership.start_date  BETWEEN '{$fixedStartDate[0]}' AND '{$fixedStartDate[1]}'";
-            $where  .= " AND civicrm_membership.end_date BETWEEN '{$fixedEndDate[0]}' AND '{$fixedEndDate[1]}'";
-        }elseif (empty(!$selectedDateStart) &&  empty($selectedDateEnd)) { // if user does not select end date 
-            $where  .= " civicrm_membership.start_date  BETWEEN '{$fixedStartDate[0]}' AND '{$fixedStartDate[1]}'";
-        }elseif (empty($selectedDateStart) &&  empty(!$selectedDateEnd)) { // if user does not select Start date 
-            $where  .= " civicrm_membership.end_date  BETWEEN '{$fixedEndDate[0]}' AND '{$fixedEndDate[1]}'";
-        }
-
-        return $where;
+    function where($includeContactIDs = false){
+      if ($this->_query->_whereClause) {
+          $whereClause = $this->_query->_whereClause;
+      if ($this->_aclWhere) {
+          $whereClause .= " AND {$this->_aclWhere}";
+      }
+      return $whereClause;
+    }
+    return ' (1) ';  
     }
 
     /**
@@ -189,8 +142,7 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
    *
    * @return string, template path (findable through Smarty template path)
    */
-    function templateFile() 
-    {
+    function templateFile(){
         return 'CRM/Ext/Form/Search/Custom.tpl';
     }
 
@@ -200,10 +152,14 @@ class CRM_Ext_Form_Search_extSearch extends CRM_Contact_Form_Search_Custom_Base 
    * @param  array $row modifiable SQL result row
    * @return void
    */
-    function alterRow(&$row) 
-    {
+    function alterRow(&$row){
     
     }
-
-
+    
+  /**
+   * @param string $tableAlias
+   */
+  public function buildACLClause($tableAlias = 'contact') {
+    list($this->_aclFrom, $this->_aclWhere) = CRM_Contact_BAO_Contact_Permission::cacheClause($tableAlias);
+  }
 }
